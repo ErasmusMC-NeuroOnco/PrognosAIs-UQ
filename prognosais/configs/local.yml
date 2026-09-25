@@ -1,0 +1,111 @@
+# Portable CSNet example: replace every /absolute/path before executing.
+# Grade labels use their clinical values: 2=grade 2, 3=grade 3, 4=grade 4.
+data:
+  modalities:
+    T1: "T1"
+    T1CE: "T1CE"
+    T2: "T2"
+    FLAIR: "FLAIR"
+  mask_file_name: "MASK"
+  folders:
+    original: "NIFTI"
+    registered: "REGISTERED"
+    preprocessed: "PREPROCESSED"
+  labels:
+    case_id_column: "Image"
+    tasks:
+      idh: "IDH"
+      onep19q: "1p19q"
+      grade: "Grade"
+  train:
+    input_dir: "/absolute/path/to/train"
+    labels_file_path: "/absolute/path/to/train/labels.txt"
+    subset: 1
+    type: "preprocessed"
+    missing_value: -1
+    augmentation_factor: 1
+    augmentation_probability: 0.35
+  test:
+    input_dir: "/absolute/path/to/test"
+    labels_file_path: "/absolute/path/to/test/labels.txt"
+    inference_mode: "labeled"
+    subset: 1
+    type: "preprocessed"
+    missing_value: -1
+  preprocess:
+    input_dir: "/absolute/path/to/train"
+    mask_origin_file_path: ""
+    already_registered: true
+    bias_field_correction: true
+
+output_format:
+  images: ".svg"
+  tables: ".csv"
+
+experiment:
+  # Set Slurm account, partition, memory, time, and GPUs in the sbatch command.
+  experiment_name: "paper"
+  run_name: "dropout_025_seed_42"
+  experiments_dir: "/absolute/path/to/experiments"
+
+containers:
+  download_path: "/absolute/path/to/containers"
+  hdbet_version: "REPLACE_WITH_TAG"
+  fsl_version: "REPLACE_WITH_TAG"
+
+environment:
+  seed: 42
+
+model:
+  architecture: "csnet"
+  classification_only: false
+  train:
+    kfold: false
+    num_folds: 5
+    epochs: 150
+    batch_size: 4
+    dropout_rate: 0.25
+    optimizer:
+      learning_rate: 1.0e-05
+      weight_decay: 1.0e-05
+      scheduler:
+        minimum_lr: 1.0e-11
+        reduction_factor: 0.25
+        patience: 5
+        threshold: 0.0001
+    early_stopping:
+      delta: 0
+      patience: 20
+  test:
+    results_dir: "/absolute/path/to/experiments/paper/dropout_025_seed_42"
+    model_dir: null
+    model_type: "best"
+    kfold: false
+    num_folds: 5
+    batch_size: 4
+    save_predictions: true
+    save_prob_map: true
+  UQ:
+    mcd:
+      n_samples: 30
+      dropout_rate: 0.25
+    de:
+      num_models: 5
+      dropout_rate: 0.25
+      ensemble_root_dir: "/absolute/path/to/experiments/paper"
+      seed_folder_template: "dropout_025_seed_{seed}"
+      seeds: [42, 43, 44, 45, 46]
+    mcd_de:
+      num_models: 5
+      n_samples: 30
+      dropout_rate: 0.25
+      ensemble_root_dir: "/absolute/path/to/experiments/paper"
+      seed_folder_template: "dropout_025_seed_{seed}"
+      seeds: [42, 43, 44, 45, 46]
+    mask_based_segmentation:
+      dilation_radius_voxels: 5
+      boundary_sigma_voxels: 5.0
+      export_maps: true
+      export_masks: true
+      ground_truth_mask_relative_path: "PREPROCESSED/MASK.nii.gz"
+      brain_mask_relative_path: "BRAIN_MASKS/CROPPED_FROM_REGISTERED/combined_brain_mask.nii.gz"
